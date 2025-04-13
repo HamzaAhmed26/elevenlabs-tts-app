@@ -3,7 +3,7 @@ import requests
 import base64
 
 # 🔐 Set your ElevenLabs API Key and Cloned Voice ID here
-XI_API_KEY = "your_api_key_here"
+XI_API_KEY = st.secrets["XI_API_KEY"]
 CLONED_VOICE_ID = "your_cloned_voice_id_here"
 
 # ⛓️ Text-to-speech function using ElevenLabs API
