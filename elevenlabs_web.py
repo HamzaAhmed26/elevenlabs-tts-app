@@ -1,31 +1,19 @@
+import streamlit as st
 import requests
 
-XI_API_KEY = "<xi-api-key>"  # Replace with your ElevenLabs API key
+XI_API_KEY = st.secrets["XI_API_KEY"]
 
-# Step 1: Get all voices
+@st.cache_data
 def get_voices():
     url = "https://api.elevenlabs.io/v1/voices"
-    headers = {
-        "Accept": "application/json",
-        "xi-api-key": XI_API_KEY
-    }
+    headers = {"xi-api-key": XI_API_KEY}
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
-        return response.json()['voices']
+        return response.json()["voices"]
     else:
-        print("Error fetching voices:", response.status_code)
+        st.error("Failed to fetch voices.")
         return []
 
-# Step 2: Display voices and select one
-def choose_voice(voices):
-    print("\nAvailable Voices:")
-    for i, voice in enumerate(voices):
-        print(f"{i + 1}. {voice['name']} ({voice['voice_id']})")
-    
-    index = int(input("\nSelect a voice by number: ")) - 1
-    return voices[index]['voice_id'], voices[index]['name']
-
-# Step 3: Convert text to speech
 def text_to_speech(voice_id, text):
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {
@@ -34,25 +22,26 @@ def text_to_speech(voice_id, text):
     }
     data = {
         "text": text,
-        "voice_settings": {
-            "stability": 0.7,
-            "similarity_boost": 0.7
-        }
+        "voice_settings": {"stability": 0.7, "similarity_boost": 0.7}
     }
-
     response = requests.post(url, headers=headers, json=data)
     if response.status_code == 200:
-        with open("output.mp3", "wb") as f:
-            f.write(response.content)
-        print("✅ Audio saved as output.mp3")
+        return response.content
     else:
-        print("Error converting text:", response.status_code, response.text)
+        st.error(f"Error: {response.status_code} - {response.text}")
+        return None
 
-# Main flow
-if __name__ == "__main__":
-    voices = get_voices()
-    if voices:
-        voice_id, voice_name = choose_voice(voices)
-        print(f"\nYou selected: {voice_name}")
-        text = input("Enter the text you want to convert to speech: ")
-        text_to_speech(voice_id, text)
+st.title("🗣️ ElevenLabs Text to Speech")
+
+voices = get_voices()
+voice_names = [f"{v['name']} ({v['voice_id'][:6]})" for v in voices]
+voice_map = {name: v['voice_id'] for name, v in zip(voice_names, voices)}
+
+selected_voice = st.selectbox("Choose a voice", voice_names)
+text_input = st.text_area("Enter text", "Hello world! This is ElevenLabs.")
+
+if st.button("Generate Audio"):
+    audio = text_to_speech(voice_map[selected_voice], text_input)
+    if audio:
+        st.audio(audio, format="audio/mp3")
+        st.success("✅ Audio generated!")
